@@ -1,0 +1,5 @@
+#!/usr/bin/php
+<?php 
+// shell wrapper for mailto.php
+include "mailto.php"; 
+?>

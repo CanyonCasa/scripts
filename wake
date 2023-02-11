@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+
+# Simplification of Net::Wake Copyright 1999-2003 Clinton Wong 
+
+=head1 NAME
+
+wake - A script to send magic packets to wake up computers.
+
+=head1 SYNOPSIS
+
+To send a wake-on-lan "magic" packet via UDP...
+
+  wake [machine] ...
+  
+  where machine is or more machine names in table appended to this script
+  
+=head1 DESCRIPTION
+
+This script sends wake-on-lan (AKA magic) packets to wake up machines 
+from standby that are wake-on-lan capable and identified at the tail of 
+this file. The script takes only a list of one or more machine names to 
+wake. If no machine name is given the script returns the list of defined 
+machines.
+
+=head1 SEE ALSO
+
+  http://search.cpan.org/~clintdw/Net-Wake-0.02/lib/Net/Wake.pm
+  http://gsd.di.uminho.pt/jpo/software/wakeonlan/mini-howto/
+
+=head1 COPYRIGHT
+
+Copyright 2008 CanyonCasa@sedillocanyon
+
+This program is free software; you can redistribute it and/or modify 
+it under the same terms as Perl itself.
+
+=cut
+
+use strict;
+use IO::Socket;
+use Socket;
+use Net::Ping;
+
+use vars qw($VERSION);
+$VERSION = '0.01';
+
+my $timeout=20;
+my $hex='[a-fA-F0-9][a-fA-F0-9]';   # pair of hex digits
+my $mark='[:\-]';                   # delimiter linux and windows
+my $macx="$hex$mark$hex$mark$hex$mark$hex$mark$hex$mark$hex";
+my %mac;    # hash of machine MAC addresses by machine name
+
+# read the appended machine list...
+while (<DATA>) { 
+  if (/^\#\s+([a-z0-9\.]+)\s+($macx)/i) { $mac{$1}=$2; }; 
+  };
+
+# if no argument list then return the list of defined machines
+unless ($ARGV[0]) { 
+  print "SYNTAX: wake [machine] ...\n";
+  print "  MACHINES[".join(" ",sort keys(%mac))."]\n";
+  #print "  MACS[".join(" ",sort values(%mac))."]\n";
+  };
+
+foreach my $host (@ARGV) {
+  print "Waking ".$host."[".$mac{$host}."] ... \n";
+  my $mac_addr=$mac{$host};
+  $mac_addr=~s/:\-//g;
+  my $sock=new IO::Socket::INET(Proto=>'udp') || 
+    die "UNABLE TO CREATE SOCKET...\n";
+  my $sock_addr = sockaddr_in(9,inet_aton('255.255.255.255'));
+  my $magic_packet = pack('C6H*', 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 
+    $mac_addr x 16);
+  setsockopt($sock, SOL_SOCKET, SO_BROADCAST, 1);
+  send($sock, $magic_packet, 0, $sock_addr);
+  close ($sock);
+  # validate wakeup...
+  my ($name,$aliases,$addrtype,$length,@addrs)=gethostbyname($host);
+  my $ip=join(':',(unpack('C4',$addrs[0])));
+  #my $name=gethostbyaddr($addr,PF_INET);
+  if (defined $name) { 
+    print "ping $host as $name [$ip]\n";
+    $host=$name; 
+    };
+  my $hHOST = Net::Ping->new($> ? 'udp' : 'icmp', $timeout);
+  if ($hHOST->ping($host)) {
+    print "$host is awake\n";
+    }
+  else {
+    print "no answer from $host\n";
+    };
+  };
+
+__DATA__
+# installation specific machine list...
+# name          mac
+
+# actiontec     00-26-b8-d8-aa-6b   ; Actiontec modem 192.168.0.1
+# black         b8-27-eb-2c-ed-96
+# brother       00-80-92-a8-31-99
+# datos         b8-27-eb-2c-ed-96
+# esposa        00-13-d4-7d-d4-b5
+# padre		64:00:6A:40:EE:39
+# red           b8-27-eb-ef-32-34
+# tienda        b8-27-eb-2c-35-c1
+# xport         00:20:4a:9a:ef:da   ; Lantronix XPORT 192.168.0.88

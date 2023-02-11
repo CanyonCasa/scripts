@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# script to make OS updates
+BITPATH="/home/bitnami/bin:/opt/bitnami/apache/bin:/opt/bitnami/node/bin:/opt/bitnami/python/bin:/opt/bitnami/redis/bin"
+export PATH="$BITPATH:$PATH"
+
+e=`date +%s`
+dx=`date -u +%Y%m%dT%H%M%SZ`
+logRoot='/tmp/update'
+tmp="$logRoot.tmp"
+log="$logRoot-$dx.log"
+NL=$'\n'
+
+echo "$0 RUN $dx" > $log 2>&1
+echo "$USER: $PATH" > $log 2>&1
+echo "" >> $log 2>&1
+
+# report disk status...
+echo "PRE-RUN disk status..." >> $log 2>&1
+#du -s /tmp /var /usr /mnt /opt >> $log 2>/dev/null
+df -B M --total -x tmpfs -x devtmpfs >> $log 2>/dev/null
+echo "" >> $log 2>&1
+
+# run system update...
+echo "Performing system update..." >> $log 2>&1
+echo "  Refresh the repository list..." >> $log 2>&1
+apt-get update -y > $tmp 2>&1
+echo "  Upgrade packages..." >> $log 2>&1
+apt-get upgrade -y >> $tmp 2>&1
+echo "  Cleanup and remove old packages..." >> $log 2>&1
+apt-get clean -y >> $tmp 2>&1
+apt-get autoremove -y >> $tmp 2>&1
+echo "" >> $tmp 2>&1
+
+# report disk status...
+echo "POST-RUN disk status..." >> $log 2>&1
+#du -s /tmp /var /usr /mnt /opt >> $log 2>/dev/null
+df -B M --total -x tmpfs -x devtmpfs >> $log 2>/dev/null
+echo "" >> $log 2>&1
+
+# is restart required...
+reboot=$(grep -c "restart required" /etc/motd)
+if [ $reboot -ne 0 ]
+then
+  echo "REBOOT REQUIRED!" >> $log 2>&1
+  reboot_msg="REBOOT REQUIRED!!!$NL"
+else
+  echo "NO REBOOT REQUIRED!" >> $log 2>&1
+  reboot_msg=''
+fi
+echo "" >> $log 2>&1
+
+eflag=`grep -ci "error" $tmp`
+errors_msg="$eflag ERRORS!$NL"
+if [ $eflag -ne 0 ]
+then
+  echo "ERRORS..." >> $log 2>&1
+  grep -i "error" $tmp >> $log 2>&1
+  echo "-- END OF ERRORS --" >> $log 2>&1
+fi
+echo "" >> $log 2>&1
+
+# compute and report elasped time...
+elapsed=$(date -d "1970-01-01 `expr $(date +%s) - $e` sec" +%H:%M:%S)
+echo "### UPDATE COMPLETED! ELAPSED TIME: $elapsed" >> $log 2>&1
+
+echo "Update Log..." >> $log 2>&1
+
+cat $tmp >> $log
+
+# remove logs over 30 days old...
+find $logRoot.* -mtime +30 | 2>/dev/null xargs -r rm -- >> $tmp 2>&1
+echo "" >> $tmp 2>&1
+
+# send notification email...
+subj=$( echo $HOSTNAME update script... | tr a-z A-Z )
+echo "SMS: $subj$NL$restart_msg$reboot_msg$errors_msg[$log]" >> $log 2>&1
+python3 sms.py "$subj$NL$restart_msg$reboot_msg$errors_msg[$log]" >> $log 2>&1
+#postlog $log "$subj_msg$restart_msg$reboot_msg$errors_msg[$log]" $check UPDATE
+cat $log | /usr/local/bin/sg_mail.py "$subj"
+cp $log "$logRoot.log"

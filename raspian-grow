@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# script to resize  raspian root partition to specific size...
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
+
+
+# check for required resize argument...
+if [ -z "$1" ]
+  then
+    echo "No argument supplied"
+    echo "SYNTAX: ${0##*/} size_in[g|m|k|s]"
+    echo "  for example:  ${0##*/} 8192m"
+    exit 2
+fi
+
+# show current root size
+echo "Current root size info ..."
+df -m /
+
+# ROOT PARTITION parameters...
+ROOT_PART_DEV=$(findmnt / -o source -n)
+ROOT_PART_NAME=$(echo "$ROOT_PART_DEV" | cut -d "/" -f 3) ROOT_DEV_NAME=$(echo /sys/block/*/"${ROOT_PART_NAME}" | cut -d "/" -f 4)
+ROOT_DEV="/dev/${ROOT_DEV_NAME}"
+ROOT_PART_NUM=$(cat "/sys/block/${ROOT_DEV_NAME}/${ROOT_PART_NAME}/partition")
+ROOT_DEV_SIZE=$(cat "/sys/block/${ROOT_DEV_NAME}/size")
+TARGET_END=$((ROOT_DEV_SIZE - 1))
+PARTITION_TABLE=$(parted -m "$ROOT_DEV" unit s print | tr -d 's')
+LAST_PART_NUM=$(echo "$PARTITION_TABLE" | tail -n 1 | cut -d ":" -f 1)
+ROOT_PART_LINE=$(echo "$PARTITION_TABLE" | grep -e "^${ROOT_PART_NUM}:")
+ROOT_PART_START=$(echo "$ROOT_PART_LINE" | cut -d ":" -f 2)
+ROOT_PART_END=$(echo "$ROOT_PART_LINE" | cut -d ":" -f 3)
+
+# resize partition to ...
+ROOT_PART_RESIZE=$((`echo $1 | sed -e 's/g/*1024m/i' -e 's/m/*1024k/i' -e 's/k/*2/i' -e 's/[sb]//i'`))
+ROOT_PART_NEW_END=$((ROOT_PART_START + ROOT_PART_RESIZE - 1))
+if [ $ROOT_PART_NEW_END -gt $ROOT_PART_END ] && [$ROOT_PART_NEW_END -lt $ROOT_DEV_SIZE ]; then
+    OLD_TARGET_END = $TARGET_END
+    TARGET_END=$ROOT_PART_NEW_END
+fi
+parted -m "$ROOT_DEV" u s resizepart "$ROOT_PART_NUM" "$TARGET_END"
+
+# resize filesystem to fill partition...
+resize2fs $ROOT_PART_DEV
+
+# report change ...
+echo "New root size info ..."
+df -m /
+
