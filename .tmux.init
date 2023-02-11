@@ -1,0 +1,33 @@
+#!/bin/bash
+BITPATH="/home/bitnami/bin:/opt/bitnami/apache/bin:/opt/bitnami/node/bin:/opt/bitnami/python/bin:/opt/bitnami/redis/bin"
+export PATH="$BITPATH:$PATH"
+echo "$USER: $PATH"
+
+
+# preloaded session per user...
+/usr/bin/tmux new-session -d -s $USER
+
+# define a set of windows and launch specific commands
+# to make windows remain if initial command terminates append a "; bash -i" to command
+
+# Homebrew web server
+/usr/bin/tmux new-window -c /home/$USER/cloud/bin -n Cloud 'node cloud.js ../restricted/config; bash -i'
+#/usr/bin/tmux new-window -c /home/$USER/cloud/bin -n Cloud 'forever node cloud.js ../restricted/config; bash -i'
+
+# sqlite restricted bash shell
+/usr/bin/tmux new-window -c /home/$USER/cloud/restricted -n restricted
+
+# interactive node shell
+/usr/bin/tmux new-window -c /home/$USER/cloud/bin -n node++ 'node -r ./Extensions2JS; bash -i'
+
+# cloud log files
+/usr/bin/tmux new-window -c /home/$USER/cloud/logs -n logs 'ls; bash -i'
+
+# general purpose bash shell
+/usr/bin/tmux new-window -c /home/$USER -n bash
+
+# interactive python window
+/usr/bin/tmux new-window -c /home/$USER/bin -n python 'python; bash -i'
+
+# general purpose bash shell
+/usr/bin/tmux new-window -c /home/$USER -n root 'sudo -s; bash -i'

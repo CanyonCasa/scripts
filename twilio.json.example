@@ -1,0 +1,13 @@
+{
+  "accountSID": "AC...",
+  "authToken": "...",
+  "callback": "https://example.net/@twilio/status/admin",
+  "callbackContacts": {
+    "admin": "+15555555555,..."
+  },
+  "messagingService": "MG...",
+  "name": "Example Network",
+  "number": "+15551234567",
+  "notifyService": "",
+  "admin": "+15555555555"
+}

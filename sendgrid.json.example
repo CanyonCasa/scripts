@@ -1,0 +1,8 @@
+{
+  "key": "SG.---.---",
+  "to": "sendgrid@example.net",
+  "from": "sendgrid@example.net,...",
+  "name": "Example Network",
+  "subject": "Example Network Notice",
+  "text": "No msg provided!"
+}
