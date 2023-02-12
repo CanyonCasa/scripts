@@ -3,7 +3,7 @@
 # script to test cron call
 
 d=`date +%s`
-log='/var/log/scripts/crontest.log'
+log='/var/log/crontest.log'
 
 echo "$0 run $d" >> $log 2>&1
 sleep 3
@@ -11,9 +11,6 @@ echo "PATH: $PATH" >> $log 2>&1
 #PATH=$PATH:/usr/local/bin
 #echo "PATH: $PATH" >> $log 2>&1
 sleep 3
-
-#tail $log | /usr/local/bin/mailto dave@sedillocanyon.net
-#tail $log | mailto dvc@sedillocanyon.net
 
 d2=`date +%s`
 
