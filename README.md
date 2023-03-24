@@ -47,10 +47,10 @@ The _*.service_ files must be placed in the /etc/systemd/system directory AND en
 ### TMUX
 
 I find the tmux service particularly useful. It requires setup of the _tmux.service_, which runs the _tmuxuser_ script, and possibly requires install of _tmux_. 
-This script launches a _tmux_ process for each user at login, if they have a _.tmux.init_ file in their home directory. This file configures/customizes 
-the particular windows created by tmux. Users should customize it accordingly, which is beyond the scope of this documentation. See _tmux_ documentation 
-for specifics. Users may also define a _.tmux.conf_ file in thier home directory to customize tmux behavior as desired. Note, both the init and conf 
-files are 'dot' files, making them hidden files.
+This script launches a _tmux_ process for each user at login, if they have a _.tmux.init_ file in their home directory. This file configures/customizes the particular windows created by tmux. Users should customize it accordingly, which is beyond the scope of this documentation. See _tmux_ documentation 
+for specifics. Users may also define a _.tmux.conf_ file in thier home directory to customize tmux behavior as desired. Note, both the init and conf files are 'dot' files, making them hidden files.
+
+>**NOTE: For certain versions of tmux, the _.tmux.init_ file must have executable permissions (i.e. chmod 755 .tmux.init).**
 
 Once setup, upon login a user simply enters the command _gotmux_ (i.e "got mux" or "go tmux") to resume the defined session and pick up where they left off
 as sessions persist from login to login.
